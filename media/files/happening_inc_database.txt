@@ -1,0 +1,54 @@
+Company Name: Happening Inc.
+
+Description:
+Happening Inc. is a cutting-edge event management platform that simplifies ticketing and event organization. 
+It enables seamless event discovery, ticket booking, and management for both organizers and attendees. 
+With a robust and scalable infrastructure, Happening Inc. ensures a smooth experience for users looking to 
+attend or host events of all scales.
+
+Board Members:
+1. Sahibdeep Singh
+2. Rakshit Mehra
+3. Parth Kapoor
+
+Technology Stack:
+Frontend: Next.js (React-based framework for seamless user experience)
+Backend: Django & Django-Ninja (Fast, scalable API development)
+Microservices: Celery (Task queue for asynchronous background jobs)
+Database: PostgreSQL (Relational database for structured event and user data storage)
+Caching: Redis (Optimized performance through in-memory caching)
+Authentication: Django Allauth (Secure and extendable authentication system)
+Deployment: Docker & Kubernetes (Containerized deployment for high availability and scalability)
+Payment Gateway: Stripe / Razorpay (Secure transaction processing for ticket sales)
+
+Core Features:
+- Event Creation & Management: Organizers can create, edit, and publish events effortlessly.
+- Ticket Booking System: Users can seamlessly purchase and manage their tickets.
+- Secure Payments: Integrated payment gateways for hassle-free transactions.
+- User Profiles & Dashboards: Personalized experience for event organizers and attendees.
+- Email Notifications: Automated event reminders and updates powered by Celery.
+- Community Engagement: Social media-like features to enhance event interactions.
+- Data Analytics: Insights on ticket sales, user engagement, and event performance.
+- Mobile-Friendly Design: Optimized for desktop and mobile users.
+
+Company Vision:
+Happening Inc. aims to redefine the event industry by providing an intuitive, feature-rich, and highly 
+scalable event management solution. By leveraging the latest technology, Happening Inc. seeks to bridge 
+the gap between event organizers and attendees, ensuring seamless interactions and unforgettable experiences.
+
+Security & Compliance:
+- SSL Encryption for secure transactions and data protection.
+- GDPR and data privacy-compliant user data handling.
+- Role-based access control (RBAC) for enhanced security.
+
+Future Roadmap:
+- AI-driven event recommendations for personalized user experiences.
+- Integration with Web3 & NFTs for exclusive digital event passes.
+- Advanced analytics dashboard for deeper event insights.
+
+Contact & Support:
+Website: [Add your website here]
+Email: [Support email]
+Social Media: [Links to social platforms]
+
+This document provides a comprehensive overview of Happening Inc. for use in retrieval-augmented generation (RAG) systems.

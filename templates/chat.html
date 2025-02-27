@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Chat</title>
+    <script src="https://unpkg.com/htmx.org"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+    </style>
+</head>
+
+<body class="bg-black text-white h-screen flex">
+    <!-- Sidebar -->
+    <div class="w-80 bg-zinc-900 border-r border-zinc-800 flex flex-col">
+        <!-- Profile Header -->
+        <div class="p-4 border-b border-zinc-800 flex items-center">
+            <div class="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center">
+                <span class="text-lg font-semibold">{{ username.0 }}</span>
+            </div>
+            <span class="ml-3 font-medium">{{ username }}</span>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="p-4">
+            <div class="relative">
+                <input type="text" placeholder="Search chats" 
+                       class="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-600">
+            </div>
+        </div>
+
+        <!-- Chat List -->
+        <div class="flex-1 overflow-y-auto">
+            <!-- Sample Chat Items -->
+            {% for bot in bots %}
+            <div class="hover:bg-zinc-800 p-4 cursor-pointer border-b border-zinc-800">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center">
+                        <span>{{ bot.name.0 }}</span>
+                    </div>
+                    <div class="ml-4">
+                        <div class="font-medium">{{ bot.name }}</div>
+                        <div class="text-sm text-zinc-400">tap to chat</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Main Chat Area -->
+    <div class="flex-1 flex flex-col bg-zinc-900">
+        <!-- Chat Header -->
+        <div class="h-16 border-b border-zinc-800 flex items-center px-6">
+            <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center">
+                    <span>{{ botname.0 }}</span>
+                </div>
+                <span class="ml-3 font-medium">{{ botname }}</span>
+            </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div id="chat-window" class="flex-1 p-6 overflow-y-auto space-y-4">
+            {% for msg in messages %}
+                <div class="message-container flex flex-col space-y-1">
+                    <!-- User Message -->
+                    <div class="bg-zinc-700 text-white rounded-lg p-3 max-w-md ml-auto">
+                        {{ msg.query }}
+                    </div>
+                    <!-- Bot Response -->
+                    <div class="bg-zinc-800 text-white rounded-lg p-3 max-w-md">
+                        {{ msg.response_generated }}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Typing Animation -->
+        <div id="typing-animation" class="hidden px-6 py-3">
+            <div class="flex items-center space-x-2 bg-zinc-800 rounded-lg p-3 max-w-[100px]">
+                <div class="w-2 h-2 bg-zinc-400 rounded-full animate-bounce"></div>
+                <div class="w-2 h-2 bg-zinc-400 rounded-full animate-bounce delay-200"></div>
+                <div class="w-2 h-2 bg-zinc-400 rounded-full animate-bounce delay-400"></div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <form id="chat-form" class="border-t border-zinc-800 p-4 bg-zinc-900">
+            {% csrf_token %}
+            <div class="flex items-center space-x-4">
+                <input type="text" id="user-input" name="query" placeholder="Type a message..." 
+                       class="flex-1 bg-zinc-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-zinc-600">
+                <button type="submit" class="bg-zinc-700 hover:bg-zinc-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                    Send
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+    function getCSRFToken() {
+        return document.querySelector("[name=csrfmiddlewaretoken]").value;
+    }
+
+    function scrollToBottom() {
+        let chatWindow = document.getElementById("chat-window");
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function showTypingAnimation() {
+        document.getElementById("typing-animation").classList.remove("hidden");
+    }
+
+    function hideTypingAnimation() {
+        document.getElementById("typing-animation").classList.add("hidden");
+    }
+
+    function appendUserMessage(message) {
+        let chatWindow = document.getElementById("chat-window");
+        chatWindow.innerHTML += `
+            <div class="message-container flex flex-col space-y-1">
+                <div class="bg-zinc-700 text-white rounded-lg p-3 max-w-md ml-auto">
+                    ${message}
+                </div>
+            </div>
+        `;
+    }
+
+    document.getElementById("chat-form").addEventListener("submit", function(event) {
+        event.preventDefault();
+        
+        let inputField = document.getElementById("user-input");
+        let message = inputField.value.trim();
+        
+        if (message === "") return;
+
+        appendUserMessage(message);
+        showTypingAnimation();
+        scrollToBottom();
+
+        // Clear input field
+        inputField.value = "";
+
+        // Send data using HTMX
+        htmx.ajax("POST", "{% url 'chat_view' textfile botname uuid %}", {
+            target: "#chat-window",
+            swap: "beforeend",
+            values: { 
+                query: message,
+                csrfmiddlewaretoken: getCSRFToken()
+            },
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        });
+    });
+
+    // Ensure scroll to bottom when the page loads
+    window.onload = function() {
+        scrollToBottom();
+    };
+    
+    // Handle HTMX events
+    document.body.addEventListener('htmx:beforeRequest', function(evt) {
+        showTypingAnimation();
+    });
+
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+        hideTypingAnimation();
+        scrollToBottom();
+    });
+    </script>
+</body>
+</html>
