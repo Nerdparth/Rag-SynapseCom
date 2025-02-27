@@ -9,12 +9,16 @@ def bot_chat(request, textfile, botname, uuid):
     user = request.user
     username = user.username
     bots = []
+    bots_exist = True
     bots_getter = Bots.objects.filter(user = user)
     for bot in bots_getter:
         bots.append(bot)
+    if len(bots) == 0:
+        bots_exist = False
     bot_object_for_messages = get_object_or_404(Bots, uuid = uuid)
     
     messages = Response.objects.filter(bot=bot_object_for_messages)
+    vector_db_path_getter = get_object_or_404(Bots, uuid=uuid).vectordb_path
 
     if "HX-Request" in request.headers:  # Detect HTMX request
         message_received = request.POST.get("query", "").strip()
@@ -22,7 +26,7 @@ def bot_chat(request, textfile, botname, uuid):
         if not message_received:  # Prevent empty messages
             return HttpResponse("")
 
-        response_generated = response_generator(message_received, textfile)
+        response_generated = response_generator(message_received, vector_db_path_getter)
 
         # Save new message and response
         htmx_message = Response.objects.create(
@@ -49,6 +53,7 @@ def bot_chat(request, textfile, botname, uuid):
             "bots" : bots,
             "botname" : botname,
             "uuid" : uuid,
-            "username" : username
+            "username" : username,
+            "bots_exist" : bots_exist
         },
     )

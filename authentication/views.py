@@ -45,12 +45,21 @@ def login_view(request):
     return render(request, "login.html")
 
 
+def logout_view(request):
+    logout(request)
+    return redirect("login_view")
+
+
 def home_view(request):
     user = request.user
+    username = user.username
+    if not user.is_authenticated:
+        return redirect("login_view")
     bots = []
+    bots_exist = True
     bots_getter = Bots.objects.filter(user = user)
     for bot in bots_getter:
         bots.append(bot)
-    if not user.is_authenticated:
-        return redirect("login_view")
-    return render(request, "home.html", {"bots" : bots})
+    if len(bots) == 0:
+        bots_exist = False
+    return render(request, "home.html", {"bots" : bots, "bots_exist" : bots_exist, "username" : username})

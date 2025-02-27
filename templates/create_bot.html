@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Chat</title>
+    <script src="https://unpkg.com/htmx.org"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        .cs-text{
+            position: absolute;
+            top: 50%;
+            left: 63%;
+            transform: translate(-50%,-50%);
+        }
+        
+        /* File upload styling */
+        .file-drop-area {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 450px;
+            padding: 25px;
+            border: 2px dashed #4b5563;
+            border-radius: 12px;
+            transition: 0.2s;
+            background-color: rgba(75, 85, 99, 0.1);
+        }
+        
+        .file-drop-area.is-active {
+            border-color: #e5e7eb;
+            background-color: rgba(229, 231, 235, 0.1);
+        }
+        
+        .file-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 100%;
+            cursor: pointer;
+            opacity: 0;
+        }
+        
+        .file-msg {
+            font-size: 16px;
+            font-weight: 400;
+            color: #d1d5db;
+            text-align: center;
+            transition: 0.2s;
+        }
+        
+        /* File preview */
+        .file-preview {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background-color: rgba(75, 85, 99, 0.2);
+        }
+        
+        /* Form animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        /* Error message animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        
+        .shake {
+            animation: shake 0.6s ease-in-out;
+        }
+    </style>
+</head>
+
+<body class="bg-black text-white h-screen flex">
+    <!-- Sidebar -->
+    <div class="w-80 bg-zinc-900 border-r border-zinc-800 flex flex-col">
+        <!-- Profile Header -->
+        <div class="p-4 border-b border-zinc-800 flex items-center justify-between relative">
+            <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center">
+                    <span class="text-lg font-semibold">{{ username.0 }}</span>
+                </div>
+                <span class="ml-3 font-medium">Hey {{ username }}</span>
+            </div>
+        
+            <!-- Three-dot button with larger clickable area -->
+            <div class="relative">
+                <button id="menuButton" class="p-3 rounded-lg hover:bg-zinc-700 transition">
+                    <span class="text-xl text-zinc-400 hover:text-white">&#x22EE;</span> <!-- Wider dots -->
+                </button>
+        
+                <!-- Dropdown Menu -->
+                <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-44 bg-zinc-800 shadow-lg rounded-lg z-50">
+                    <a href="#" class="block px-4 py-3 text-sm text-white hover:bg-zinc-700">Analytics</a>
+                    <a href="{% url 'create_bot' %}" class="block px-4 py-3 text-sm text-white hover:bg-zinc-700">New Bot</a>
+                    <a href="{% url 'logout_view' %}" class="block px-4 py-3 text-sm text-red-400 hover:bg-zinc-700">Logout</a>
+                </div>
+            </div>
+        </div>
+        <!-- Search Bar -->
+        <div class="p-4">
+            <div class="relative">
+                <input type="text" placeholder="Search chats" 
+                       class="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-600">
+            </div>
+        </div>
+
+        <!-- Chat List -->
+        <div class="flex-1 overflow-y-auto flex h-full">
+            {% if bots_exist %}
+                <div class="w-full">
+                    {% for bot in bots %}
+                        <a href="{% url 'chat_view' bot.filename bot.name bot.uuid %}" class="block">
+                            <div class="hover:bg-zinc-800 p-4 cursor-pointer border-b border-zinc-800">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center">
+                                        <span>{{ bot.name.0 }}</span>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="font-medium">{{ bot.name }}</div>
+                                        <div class="text-sm text-zinc-400">tap to chat</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>    
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="flex w-full justify-center items-center">
+                    <a href="#" class="text-center text-zinc-400">
+                        Waiting to display your created bot
+                    </a>
+                </div>
+            {% endif %}
+        </div>          
+    </div>
+
+    <!-- new bot form area -->
+    <div class="flex-1 flex flex-col bg-zinc-900">
+        <div class="flex-1 flex items-center justify-center">
+            <div class="w-full max-w-md px-6 py-8 animate-fade-in">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-white mb-2">Create New Bot</h1>
+                    <p class="text-zinc-400">Upload your knowledge base and give your bot a name</p>
+                </div>
+                
+                <form id="newBotForm" class="space-y-6" action="{% url 'create_bot' %}" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- File Upload Area -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-zinc-300 mb-1">Knowledge Base</label>
+                        <div class="file-drop-area" id="fileDropArea">
+                            <span class="file-msg" id="fileMsg">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-2 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Drag & drop or click to upload<br>
+                                <span class="text-xs text-zinc-500">(TXT, JSON, or CSV files only)</span>
+                            </span>
+                            <input type="file" class="file-input" id="fileInput" name="knowledge_file" accept=".txt,.json,.csv">
+                        </div>
+                        
+                        <!-- File Preview (hidden by default) -->
+                        <div id="filePreview" class="file-preview hidden">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span id="fileName" class="text-sm text-zinc-300 truncate"></span>
+                            <button type="button" id="removeFile" class="ml-auto text-zinc-400 hover:text-zinc-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Error Message (hidden by default) -->
+                        <div id="fileError" class="hidden mt-2 text-sm text-red-400"></div>
+                    </div>
+                    
+                    <!-- Bot Name Input -->
+                    <div class="space-y-2">
+                        <label for="botName" class="block text-sm font-medium text-zinc-300">Bot Name</label>
+                        <input type="text" id="botName" name="bot_name" 
+                               class="w-full bg-zinc-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-zinc-600 transition"
+                               placeholder="Enter a name for your bot">
+                        <div id="nameError" class="hidden mt-1 text-sm text-red-400"></div>
+                    </div>
+                    
+                    <!-- Submit Button - Changed to monochromatic -->
+                    <button type="submit" id="submitBtn" 
+                            class="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-3 px-4 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-600 mt-6 border border-zinc-700">
+                        Create Bot
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- new bot form area ends -->
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Menu dropdown functionality
+            const menuButton = document.getElementById("menuButton");
+            const dropdownMenu = document.getElementById("dropdownMenu");
+    
+            menuButton.addEventListener("click", function (event) {
+                dropdownMenu.classList.toggle("hidden");
+                event.stopPropagation(); // Prevents immediate closing
+            });
+    
+            document.addEventListener("click", function (event) {
+                if (!menuButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                    dropdownMenu.classList.add("hidden");
+                }
+            });
+            
+            // File upload functionality
+            const fileDropArea = document.getElementById('fileDropArea');
+            const fileInput = document.getElementById('fileInput');
+            const fileMsg = document.getElementById('fileMsg');
+            const filePreview = document.getElementById('filePreview');
+            const fileName = document.getElementById('fileName');
+            const removeFile = document.getElementById('removeFile');
+            const fileError = document.getElementById('fileError');
+            const botNameInput = document.getElementById('botName');
+            const nameError = document.getElementById('nameError');
+            const submitBtn = document.getElementById('submitBtn');
+            const form = document.getElementById('newBotForm');
+            
+            // Highlight drop area when dragging file over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                fileDropArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                fileDropArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                fileDropArea.classList.add('is-active');
+            }
+            
+            function unhighlight() {
+                fileDropArea.classList.remove('is-active');
+            }
+            
+            // Handle file selection
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            function handleFileSelect(e) {
+                const file = e.target.files[0];
+                
+                if (file) {
+                    const fileExtension = file.name.split('.').pop().toLowerCase();
+                    
+                    // Check if file type is supported
+                    if (!['txt', 'json', 'csv'].includes(fileExtension)) {
+                        showFileError('Unsupported file format. Please upload a TXT, JSON, or CSV file.');
+                        fileInput.value = '';
+                        return;
+                    }
+                    
+                    // Show file preview
+                    fileName.textContent = file.name;
+                    filePreview.classList.remove('hidden');
+                    fileDropArea.classList.add('hidden');
+                    fileError.classList.add('hidden');
+                }
+            }
+            
+            // Remove selected file
+            removeFile.addEventListener('click', function() {
+                fileInput.value = '';
+                filePreview.classList.add('hidden');
+                fileDropArea.classList.remove('hidden');
+            });
+            
+            // Show file error
+            function showFileError(message) {
+                fileError.textContent = message;
+                fileError.classList.remove('hidden');
+                fileError.classList.add('shake');
+                
+                // Remove shake animation after it completes
+                setTimeout(() => {
+                    fileError.classList.remove('shake');
+                }, 600);
+            }
+            
+            // Form validation
+            form.addEventListener('submit', function(e) {
+                let isValid = true;
+                
+                // Validate file
+                if (!fileInput.files[0]) {
+                    showFileError('Please upload a knowledge base file.');
+                    isValid = false;
+                }
+                
+                // Validate bot name
+                if (!botNameInput.value.trim()) {
+                    nameError.textContent = 'Please enter a name for your bot.';
+                    nameError.classList.remove('hidden');
+                    nameError.classList.add('shake');
+                    
+                    setTimeout(() => {
+                        nameError.classList.remove('shake');
+                    }, 600);
+                    
+                    isValid = false;
+                } else {
+                    nameError.classList.add('hidden');
+                }
+                
+                if (!isValid) {
+                    e.preventDefault();
+                }
+            });
+            
+            // Clear error messages when typing
+            botNameInput.addEventListener('input', function() {
+                if (botNameInput.value.trim()) {
+                    nameError.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

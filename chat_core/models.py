@@ -6,7 +6,7 @@ class Bots(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     uuid = models.UUIDField(default = uuid.uuid4, editable = False)
     name = models.CharField(max_length=250, blank=False, null=False)
-    file = models.FileField(upload_to="files/", blank=False ,null=False)
+    file = models.FileField(upload_to="files/", blank=True ,null=True)
     filename = models.CharField(max_length=500, blank=False, null=False)
     vectordb_path = models.CharField(max_length=200, blank=False, null=False)
 

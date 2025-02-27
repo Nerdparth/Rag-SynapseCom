@@ -28,11 +28,27 @@
     <!-- Sidebar -->
     <div class="w-80 bg-zinc-900 border-r border-zinc-800 flex flex-col">
         <!-- Profile Header -->
-        <div class="p-4 border-b border-zinc-800 flex items-center">
-            <div class="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center">
-                <span class="text-lg font-semibold">{{ username.0 }}</span>
+        <div class="p-4 border-b border-zinc-800 flex items-center justify-between relative">
+            <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center">
+                    <span class="text-lg font-semibold">{{ username.0 }}</span>
+                </div>
+                <span class="ml-3 font-medium">Hey {{ username }}</span>
             </div>
-            <span class="ml-3 font-medium">{{ username }}</span>
+        
+            <!-- Three-dot button with larger clickable area -->
+            <div class="relative">
+                <button id="menuButton" class="p-3 rounded-lg hover:bg-zinc-700 transition">
+                    <span class="text-xl text-zinc-400 hover:text-white">&#x22EE;</span> <!-- Wider dots -->
+                </button>
+        
+                <!-- Dropdown Menu -->
+                <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-44 bg-zinc-800 shadow-lg rounded-lg z-50">
+                    <a href="#" class="block px-4 py-3 text-sm text-white hover:bg-zinc-700">Analytics</a>
+                    <a href="{% url 'create_bot' %}" class="block px-4 py-3 text-sm text-white hover:bg-zinc-700">New Bot</a>
+                    <a href="{% url 'logout_view' %}" class="block px-4 py-3 text-sm text-red-400 hover:bg-zinc-700">Logout</a>
+                </div>
+            </div>
         </div>
 
         <!-- Search Bar -->
@@ -44,22 +60,34 @@
         </div>
 
         <!-- Chat List -->
-        <div class="flex-1 overflow-y-auto">
-            <!-- Sample Chat Items -->
-            {% for bot in bots %}
-            <div class="hover:bg-zinc-800 p-4 cursor-pointer border-b border-zinc-800">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center">
-                        <span>{{ bot.name.0 }}</span>
-                    </div>
-                    <div class="ml-4">
-                        <div class="font-medium">{{ bot.name }}</div>
-                        <div class="text-sm text-zinc-400">tap to chat</div>
-                    </div>
+        <div class="flex-1 overflow-y-auto flex h-full">
+            {% if bots_exist %}
+                <div class="w-full">
+                    {% for bot in bots %}
+                        <a href="{% url 'chat_view' bot.filename bot.name bot.uuid %}" class="block">
+                            <div class="hover:bg-zinc-800 p-4 cursor-pointer border-b border-zinc-800">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center">
+                                        <span>{{ bot.name.0 }}</span>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="font-medium">{{ bot.name }}</div>
+                                        <div class="text-sm text-zinc-400">tap to chat</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>    
+                    {% endfor %}
                 </div>
-            </div>
-            {% endfor %}
+            {% else %}
+                <div class="flex w-full justify-center items-center">
+                    <a href="{% url 'create_bot' %}" class="text-center text-zinc-400">
+                        I don't think so it will render
+                    </a>
+                </div>
+            {% endif %}
         </div>
+        
     </div>
 
     <!-- Main Chat Area -->
@@ -184,6 +212,23 @@
         hideTypingAnimation();
         scrollToBottom();
     });
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const menuButton = document.getElementById("menuButton");
+            const dropdownMenu = document.getElementById("dropdownMenu");
+    
+            menuButton.addEventListener("click", function (event) {
+                dropdownMenu.classList.toggle("hidden");
+                event.stopPropagation(); // Prevents immediate closing
+            });
+    
+            document.addEventListener("click", function (event) {
+                if (!menuButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                    dropdownMenu.classList.add("hidden");
+                }
+            });
+        });
     </script>
 </body>
 </html>
